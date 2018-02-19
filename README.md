@@ -26,6 +26,8 @@ The take away:
 
 ### Usage
 ```js
+const Worker = require('@thinkmill/node-worker');
+
 const myWorker = new Worker(
   'test-worker',
   (ordinal) => {
