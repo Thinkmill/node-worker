@@ -1,0 +1,21 @@
+{
+  "name": "@thinkmill/node-worker",
+  "version": "0.0.1",
+  "description": "A simple, promise-based, worker framework",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "node",
+    "worker"
+  ],
+  "author": "John Molomby <john@thinkmill.com.au>",
+  "license": "BSD",
+  "dependencies": {
+    "debug": "^3.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^4.18.0"
+  }
+}
