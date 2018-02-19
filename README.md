@@ -8,11 +8,11 @@ $ yarn add @thinkmill/node-worker
 ```
 
 ### Constructor
-`label`: A label that describes the worker (used it logs, errors, etc)
-`runFn`: A promise-returning function that is executed on schedule (received the run ordinal)
-options: {
-	`sleepMs`: How long do we pause between runs? (in milliseconds)
-	`timeoutMs`: How long do we wait for the run promise to resolve/reject? (in milliseconds)
+`label`: A label that describes the worker (used it logs, errors, etc)  
+`runFn`: A promise-returning function that is executed on schedule (received the run ordinal)  
+options: {  
+  `sleepMs`: How long do we pause between runs? (in milliseconds)  
+  `timeoutMs`: How long do we wait for the run promise to resolve/reject? (in milliseconds)  
 }
 
 ### Notes
@@ -26,21 +26,23 @@ The take away:
 
 ### Usage
 ```js
+const Worker = require('@thinkmill/node-worker');
+
 const myWorker = new Worker(
-	'test-worker',
-	(ordinal) => {
-		return new Promise((resolve, reject) => {
-			const takeMs = 4000 + (Math.random() * 1500);
-			console.log(`Run #${ordinal} .. will take ${takeMs} ms`);
-			setTimeout(() => {
-				console.log(`Run #${ordinal} .. resolving`);
-				resolve('done');
-			}, takeMs);
-		});
-	}, {
-		sleepMs: 5000,
-		timeoutMs: 5 * 1000,
-	}
+  'test-worker',
+  (ordinal) => {
+    return new Promise((resolve, reject) => {
+      const takeMs = 4000 + (Math.random() * 1500);
+      console.log(`Run #${ordinal} .. will take ${takeMs} ms`);
+      setTimeout(() => {
+        console.log(`Run #${ordinal} .. resolving`);
+        resolve('done');
+      }, takeMs);
+    });
+  }, {
+    sleepMs: 5000,
+    timeoutMs: 5 * 1000,
+  }
 );
 
 myWorker.start();
