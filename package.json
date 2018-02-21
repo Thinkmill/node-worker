@@ -2,13 +2,26 @@
   "name": "@thinkmill/node-worker",
   "version": "0.0.2",
   "description": "A simple, promise-based, worker framework",
-  "author": "John Molomby <john@thinkmill.com.au>",
+  "contributors": [
+    {
+      "name": "John Molomby",
+      "email": "john@thinkmill.com.au"
+    },
+    {
+      "name": "Vito Belgiorno-Zegna",
+      "email": "vito@thinkmill.com.au"
+    }
+  ],
   "license": "BSD",
   "main": "index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/Thinkmill/node-worker.git"
   },
+  "bugs": {
+    "url": "https://github.com/Thinkmill/node-worker/issues"
+  },
+  "homepage": "https://github.com/Thinkmill/node-worker#readme",
   "keywords": [
     "node",
     "worker"
