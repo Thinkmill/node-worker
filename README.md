@@ -53,11 +53,18 @@ If the promise returned by the `payload` function has errored internally (withou
 _But_ if the promise returned is still doing work, there's the possibility we'll end up with **multiple instances** of the payload executing in tandem.
 This is almost certainly a Bad Thing, but that's up to you.
 
-
 The take away:
 
 * Make sure your worker promises always resolve
 * Probably set a fairly long `timeoutMs` value
+
+### Instance methods
+
+| Method | Description |
+| ------ | ----------- |
+| `start()` | Start the worker after a short delay. |
+| `stop()` | Stop the worker. The currently running job will be allowed to compete but the worker will not restart afterwords. |
+| `scheduleRunInMs(delayMs, onceOff`) | Schedule a run in `delayMs` milliseconds. If `onceOff` is `true` this will trigger an extra run rather than rescheduling the next run. If the worker has been stopped this will have no effect. |
 
 
 Usage
@@ -106,53 +113,61 @@ const payload = async ({ label, ordinal, timeoutMs }) => {
 
   debug(`Running for ${runForMs} ms (until ${runUntil.toISOString()})`);
 
-  return new Promise(async (resolve, reject) => {
-    let processedCount = 0;
-    let queueEmptied = false;
-    let nextThing;
+  let processedCount = 0;
+  let queueEmptied = false;
+  let nextThing;
 
-    try {
-      do {
-        await knex.transaction(async (trx) => {
+  do {
+    await knex.transaction(async (trx) => {
 
-          // Get the next thing from the queue
-          nextThing = await Model.query(trx).findOne('isReady', true).whereNull('processedAt').orderBy('queuedAt');
+      // Get the next thing from the queue
+      nextThing = await Model.query(trx).findOne('isReady', true).whereNull('processedAt').orderBy('queuedAt');
 
-          // The queue is empty; exit early
-          if (!nextThing) {
-            queueEmptied = true;
-            return;
-          }
-
-          // Do whatever it is that things do
-          // ..
-
-          // Record that we've processed this thing
-          await Model.query(trx).update({ processedAt: new Date() }).where({ id: nextThing.id });
-
-          // Inc. our count
-          processedCount++;
-        });
+      // The queue is empty; exit early
+      if (!nextThing) {
+        queueEmptied = true;
+        return;
       }
-      while (new Date() < runUntil);
-    }
-    catch (err) {
-      return reject(err);
-    }
 
-    // Output some debug info
-    const summaryMsg = `DONE: ${processedCount} things processed, leaving the queue ${queueEmptied ? 'EMPTY' : 'NOT EMPTY'}`;
-    debug(summaryMsg);
+      // Do whatever it is that things do
+      // ..
 
-    // Resolve with a boolean indicating whether the payload should be re-invoked soon or after the normal sleep
-    return resolve(queueEmptied);
-  });
+      // Record that we've processed this thing
+      await Model.query(trx).update({ processedAt: new Date() }).where({ id: nextThing.id });
+
+      // Inc. our count
+      processedCount++;
+    });
+  }
+  while (new Date() < runUntil);
+
+  // Output some debug info
+  const summaryMsg = `DONE: ${processedCount} things processed, leaving the queue ${queueEmptied ? 'EMPTY' : 'NOT EMPTY'}`;
+  debug(summaryMsg);
+  // Resolve with a boolean indicating whether the payload should be re-invoked soon or after the normal sleep
+  return queueEmptied;
 };
 
 // Create the worker instance and start it
 const worker = new Worker('dequeue-things', payload, { sleepMs: 60 * 1000 });
 worker.start();
 ```
+
+You can also request a once-off worker run from some other action. For example, if you have a worker sending emails which processes a queue every 10 minutes, you might want to trigger that worker after a successful account creation.
+
+```js
+class AccountCreator {
+
+	onCreateSuccess () {
+		// Tell the email worker to run so the user receives email promptly.
+		const onceOff = true;
+		require('../email-worker').scheduleRunInMs(200, onceOff);
+	}
+}
+
+
+```
+
 
 ### Debug
 
