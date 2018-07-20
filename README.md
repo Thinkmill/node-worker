@@ -53,11 +53,18 @@ If the promise returned by the `payload` function has errored internally (withou
 _But_ if the promise returned is still doing work, there's the possibility we'll end up with **multiple instances** of the payload executing in tandem.
 This is almost certainly a Bad Thing, but that's up to you.
 
-
 The take away:
 
 * Make sure your worker promises always resolve
 * Probably set a fairly long `timeoutMs` value
+
+### Instance methods
+
+| Method | Description |
+| ------ | ----------- |
+| `start()` | Start the worker after a short delay. |
+| `stop()` | Stop the worker. The currently running job will be allowed to compete but the worker will not restart afterwords. |
+| `scheduleRunInMs(delayMs, onceOff`) | Schedule a run in `delayMs` milliseconds. If `onceOff` is `true` this will trigger an extra run rather than rescheduling the next run. If the worker has been stopped this will have no effect. |
 
 
 Usage
@@ -145,6 +152,22 @@ const payload = async ({ label, ordinal, timeoutMs }) => {
 const worker = new Worker('dequeue-things', payload, { sleepMs: 60 * 1000 });
 worker.start();
 ```
+
+You can also request a once-off worker run from some other action. For example, if you have a worker sending emails which processes a queue every 10 minutes, you might want to trigger that worker after a successful account creation.
+
+```js
+class AccountCreator {
+
+	onCreateSuccess () {
+		// Tell the email worker to run so the user receives email promptly.
+		const onceOff = true;
+		require('../email-worker').scheduleRunInMs(200, onceOff);
+	}
+}
+
+
+```
+
 
 ### Debug
 
