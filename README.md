@@ -106,47 +106,39 @@ const payload = async ({ label, ordinal, timeoutMs }) => {
 
   debug(`Running for ${runForMs} ms (until ${runUntil.toISOString()})`);
 
-  return new Promise(async (resolve, reject) => {
-    let processedCount = 0;
-    let queueEmptied = false;
-    let nextThing;
+  let processedCount = 0;
+  let queueEmptied = false;
+  let nextThing;
 
-    try {
-      do {
-        await knex.transaction(async (trx) => {
+  do {
+    await knex.transaction(async (trx) => {
 
-          // Get the next thing from the queue
-          nextThing = await Model.query(trx).findOne('isReady', true).whereNull('processedAt').orderBy('queuedAt');
+      // Get the next thing from the queue
+      nextThing = await Model.query(trx).findOne('isReady', true).whereNull('processedAt').orderBy('queuedAt');
 
-          // The queue is empty; exit early
-          if (!nextThing) {
-            queueEmptied = true;
-            return;
-          }
-
-          // Do whatever it is that things do
-          // ..
-
-          // Record that we've processed this thing
-          await Model.query(trx).update({ processedAt: new Date() }).where({ id: nextThing.id });
-
-          // Inc. our count
-          processedCount++;
-        });
+      // The queue is empty; exit early
+      if (!nextThing) {
+        queueEmptied = true;
+        return;
       }
-      while (new Date() < runUntil);
-    }
-    catch (err) {
-      return reject(err);
-    }
 
-    // Output some debug info
-    const summaryMsg = `DONE: ${processedCount} things processed, leaving the queue ${queueEmptied ? 'EMPTY' : 'NOT EMPTY'}`;
-    debug(summaryMsg);
+      // Do whatever it is that things do
+      // ..
 
-    // Resolve with a boolean indicating whether the payload should be re-invoked soon or after the normal sleep
-    return resolve(queueEmptied);
-  });
+      // Record that we've processed this thing
+      await Model.query(trx).update({ processedAt: new Date() }).where({ id: nextThing.id });
+
+      // Inc. our count
+      processedCount++;
+    });
+  }
+  while (new Date() < runUntil);
+
+  // Output some debug info
+  const summaryMsg = `DONE: ${processedCount} things processed, leaving the queue ${queueEmptied ? 'EMPTY' : 'NOT EMPTY'}`;
+  debug(summaryMsg);
+  // Resolve with a boolean indicating whether the payload should be re-invoked soon or after the normal sleep
+  return queueEmptied;
 };
 
 // Create the worker instance and start it
