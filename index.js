@@ -18,6 +18,8 @@ class Worker {
 
 		this.label = label;
 		this.runFn = runFn;
+		this.firstRunSleepMs = 1000;
+		this.continueRunSleepMs = 1000;
 		this.sleepMs = sleepMs || (60 * 1000);
 		this.timeoutMs = timeoutMs || (this.sleepMs - 1000);
 		this.debug(`Initialised with.. label: ${label}, sleepMs: ${sleepMs}, timeoutMs: ${timeoutMs}`);
@@ -33,25 +35,28 @@ class Worker {
 	start () {
 		this.debug(`Starting; scheduling first`);
 		this._isStopped = false;
-		this.scheduleRunInMs(1000); // Schedule first run soon (rather than in this.sleepMs)
+		this.scheduleRunInMs(this.firstRunSleepMs); // Schedule first run soon (rather than in this.sleepMs)
 	}
 
 	stop () {
 		this.debug(`Stopping; cancelling next run`);
 		this._isStopped = true;
-		if (this._nextRunTimeout) clearTimeout(this._nextRunTimeout);
-		this._nextRunTimeout = undefined;
+		clearTimeout(this._nextRunTimeout);
 	}
 
-	scheduleRunInMs (delayMs) {
+	scheduleRunInMs (delayMs, onceOff) {
 		if (this._isStopped) {
 			this.debug(`Not scheduling run; worker is stopped`);
 			return;
 		}
 		this.debug(`Scheduling run in ${delayMs} ms`);
-		this._nextRunTimeout = setTimeout(() => {
+
+		const newTimeout = setTimeout(() => {
 			this.performRun();
 		}, delayMs);
+
+		clearTimeout(this._nextRunTimeout);
+		if (!onceOff) this._nextRunTimeout = newTimeout
 	}
 
 	async performRun () {
@@ -83,7 +88,7 @@ class Worker {
 			.then(finished => {
 				this.debug(`Run completed with finished value:`, finished);
 				// If not finished, sleep only briefly
-				this.scheduleRunInMs(finished ? this.sleepMs : 1000);
+				this.scheduleRunInMs(finished ? this.sleepMs : this.continueRunSleepMs);
 			})
 			.catch(err => {
 				this.debug(`Run failed with error:`, err);
